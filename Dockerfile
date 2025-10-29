@@ -29,14 +29,13 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # YA ESTÉN CONFIGURADAS EN RENDER para que las migraciones funcionen.
 
 # 1. Generar la clave de la aplicación (Necesario para el inicio)
-RUN php artisan key:generate --force
+RUN php /var/www/html/artisan key:generate --force
 
 # 2. Ejecutar Migraciones de la Base de Datos
-# NOTA: Si esta migración falla, Render cancelará la construcción.
-RUN php artisan migrate --force
+RUN php /var/www/html/artisan migrate --force
 
 # 3. Limpiar caches de configuración y vistas
-RUN php artisan optimize:clear
+RUN php /var/www/html/artisan optimize:clear
 
 # Establecer permisos
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
