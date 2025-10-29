@@ -14,7 +14,7 @@ RUN composer install --ignore-platform-reqs --no-dev --no-scripts --prefer-dist 
 FROM php:8.2-fpm-alpine
 
 # Instalar extensiones de PHP necesarias (PostgreSQL, zip, etc.)
-# Usamos 'alpine' para una imagen más pequeña
+# Usamos 'alpine' para una 
 RUN apk add --no-cache nginx git \
     postgresql-dev \
     libzip-dev \
@@ -23,6 +23,8 @@ RUN apk add --no-cache nginx git \
 # Copiar los archivos de la aplicación
 WORKDIR /var/www/html
 COPY . .
+
+
 
 # Copiar las dependencias instaladas de Composer desde el stage de "build"
 COPY --from=build /app/vendor /var/www/html/vendor
