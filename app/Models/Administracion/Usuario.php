@@ -20,6 +20,7 @@ class Usuario extends Authenticatable implements JWTSubject
         'correo',
         'activo',
         'id_rol',
+        'id_docente',
     ];
 
     protected $hidden = ['password'];
@@ -30,6 +31,11 @@ class Usuario extends Authenticatable implements JWTSubject
     public function rol()
     {
         return $this->belongsTo(Rol::class, 'id_rol');
+    }
+
+    public function docente()
+    {
+        return $this->belongsTo(\App\Models\ConfiguracionAcademica\Docente::class, 'id_docente');
     }
 
     // ==========================

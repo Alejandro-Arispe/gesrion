@@ -57,11 +57,37 @@ Route::middleware('auth')->group(function () {
         // Usuarios
         Route::resource('usuarios', UserController::class);
         
+        // Usuarios Docentes (generador masivo)
+        Route::prefix('usuarios-docentes')->name('usuarios-docentes.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Administracion\GeneradorUsuariosDocentesController::class, 'index'])
+                ->name('index');
+            Route::post('generar-masivo', [\App\Http\Controllers\Administracion\GeneradorUsuariosDocentesController::class, 'generarMasivo'])
+                ->name('generar-masivo');
+            Route::get('descargar-credenciales-pdf', [\App\Http\Controllers\Administracion\GeneradorUsuariosDocentesController::class, 'descargarCredencialesPDF'])
+                ->name('descargar-credenciales-pdf');
+            Route::post('{id_docente}/regenerar-password', [\App\Http\Controllers\Administracion\GeneradorUsuariosDocentesController::class, 'regenerarPassword'])
+                ->name('regenerar-password');
+            Route::post('{id_docente}/desactivar', [\App\Http\Controllers\Administracion\GeneradorUsuariosDocentesController::class, 'desactivarUsuario'])
+                ->name('desactivar');
+        });
+        
         // Roles (si necesitas gestionar roles)
         Route::resource('roles', RolController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
         
         // Bitácora
         Route::get('bitacora', [BitacoraController::class, 'index'])->name('bitacora.index');
+        
+        // Importación (CU11)
+        Route::prefix('importacion')->name('importacion.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Administracion\ImportacionController::class, 'index'])
+                ->name('index');
+            Route::post('preview', [\App\Http\Controllers\Administracion\ImportacionController::class, 'preview'])
+                ->name('preview');
+            Route::post('import', [\App\Http\Controllers\Administracion\ImportacionController::class, 'import'])
+                ->name('import');
+            Route::get('descargar-plantilla', [\App\Http\Controllers\Administracion\ImportacionController::class, 'descargarPlantilla'])
+                ->name('descargar-plantilla');
+        });
     });
 
     /*
@@ -178,21 +204,22 @@ Route::middleware('auth')->group(function () {
 
         // Materias (rutas web mínimas)
         Route::get('materias', function() {
-            $materias = \App\Models\ConfiguracionAcademica\Materia::with('gestion')->paginate(10);
+            $materias = \App\Models\ConfiguracionAcademica\Materia::with('facultad')->paginate(10);
             $facultades = \App\Models\ConfiguracionAcademica\Facultad::all();
             return view('configuracion-academica.materias.index', compact('materias','facultades'));
         })->name('materias.index');
 
         Route::get('materias/create', function() {
-            $gestiones = \App\Models\ConfiguracionAcademica\GestionAcademica::all();
-            return view('configuracion-academica.materias.create', compact('gestiones'));
+            $facultades = \App\Models\ConfiguracionAcademica\Facultad::all();
+            return view('configuracion-academica.materias.create', compact('facultades'));
         })->name('materias.create');
 
         Route::post('materias', function(\Illuminate\Http\Request $request) {
             $data = $request->validate([
                 'nombre' => 'required',
                 'codigo' => 'required|unique:materia',
-                'id_gestion' => 'required|exists:gestion_academica,id_gestion'
+                'carga_horaria' => 'nullable|numeric|min:1',
+                'id_facultad' => 'nullable|exists:facultad,id_facultad'
             ]);
 
             \App\Models\ConfiguracionAcademica\Materia::create($data);
@@ -202,15 +229,16 @@ Route::middleware('auth')->group(function () {
 
         Route::get('materias/{id}/edit', function($id) {
             $materia = \App\Models\ConfiguracionAcademica\Materia::findOrFail($id);
-            $gestiones = \App\Models\ConfiguracionAcademica\GestionAcademica::all();
-            return view('configuracion-academica.materias.edit', compact('materia','gestiones'));
+            $facultades = \App\Models\ConfiguracionAcademica\Facultad::all();
+            return view('configuracion-academica.materias.edit', compact('materia','facultades'));
         })->name('materias.edit');
 
         Route::put('materias/{id}', function(\Illuminate\Http\Request $request, $id) {
             $data = $request->validate([
                 'nombre' => 'required',
                 'codigo' => 'required',
-                'id_gestion' => 'required|exists:gestion_academica,id_gestion'
+                'carga_horaria' => 'nullable|numeric|min:1',
+                'id_facultad' => 'nullable|exists:facultad,id_facultad'
             ]);
 
             $materia = \App\Models\ConfiguracionAcademica\Materia::findOrFail($id);
@@ -321,8 +349,25 @@ Route::middleware('auth')->group(function () {
         // Horarios (rutas web mínimas)
         Route::get('horarios', function() {
             $horarios = \App\Models\Planificacion\Horario::with(['grupo.materia','grupo.docente','aula'])->orderBy('dia_semana')->paginate(15);
-            return view('planificacion.horarios.index', compact('horarios'));
+            $gestiones = \App\Models\ConfiguracionAcademica\GestionAcademica::all();
+            return view('planificacion.horarios.index', compact('horarios', 'gestiones'));
         })->name('horarios.index');
+
+        // Distribución de horarios multi-día
+        Route::get('distribucion', function(Request $request) {
+            $grupos = \App\Models\ConfiguracionAcademica\Grupo::with(['materia', 'docente'])
+                                                              ->where('id_gestion', $request->id_gestion ?? \App\Models\ConfiguracionAcademica\GestionAcademica::where('estado', true)->first()->id_gestion ?? 0)
+                                                              ->whereDoesntHave('horarios')
+                                                              ->get();
+            $patrones = [];
+            return view('planificacion.distribucion-horarios', compact('grupos', 'patrones'));
+        })->name('distribucion.formulario');
+
+        Route::post('distribucion/generar', [\App\Http\Controllers\Planificacion\DistribucionHorariosController::class, 'generar'])
+            ->name('distribucion.generar');
+
+        Route::get('distribucion/patrones', [\App\Http\Controllers\Planificacion\DistribucionHorariosController::class, 'obtenerPatrones'])
+            ->name('distribucion.patrones');
 
         Route::get('horarios/create', function() {
             $grupos = \App\Models\ConfiguracionAcademica\Grupo::with('materia')->get();
@@ -384,12 +429,100 @@ Route::middleware('auth')->group(function () {
             $horarios = \App\Models\Planificacion\Horario::whereHas('grupo', function($q) use ($id) { $q->where('id_docente', $id); })->with(['grupo.materia','aula'])->get();
             return response()->json(['horarios' => $horarios]);
         })->name('horarios.docente');
+
+        // ============================================
+        // QR DE AULAS
+        // ============================================
+        Route::get('generador-qr', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'index'])->name('qr.index');
+        Route::post('qr/validar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'validar'])->name('qr.validar');
+        Route::get('qr/{idAula}/mostrar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'mostrar'])->name('qr.mostrar');
+        Route::post('qr/{idAula}/generar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'generar'])->name('qr.generar');
+        Route::post('qr/{idAula}/regenerar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'regenerar'])->name('qr.regenerar');
+        Route::get('qr/listar', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'listar'])->name('qr.listar');
+        Route::post('qr/generar-todos', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'generarTodos'])->name('qr.generar-todos');
+        Route::post('qr/descargar-zip', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'descargarZip'])->name('qr.descargar-zip');
+        Route::post('qr/descargar-zip-todos', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'descargarZipTodos'])->name('qr.descargar-zip-todos');
+        Route::post('qr/regenerar-multiples', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'regenerarMultiples'])->name('qr.regenerar-multiples');
+        Route::post('qr/regenerar-todos', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'regenerarTodos'])->name('qr.regenerar-todos');
+        Route::post('qr/descargar-pdf', [\App\Http\Controllers\Planificacion\QrAulaController::class, 'descargarPdfImprimible'])->name('qr.descargar-pdf');
+    });
+    Route::middleware('auth')->group(function () {
+    
+    /*
+    |--------------------------------------------------------------------------
+    | PAQUETE: CONTROL Y SEGUIMIENTO DOCENTE
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('control-seguimiento')->name('control-seguimiento.')->group(function () {
+        
+        // Dashboard
+        Route::get('/', function () {
+            return view('control-seguimiento.index');
+        })->name('index');
+        
+        // Asistencia
+        Route::resource('asistencia', \App\Http\Controllers\ControlSeguimiento\AsistenciaController::class);
+        Route::get('asistencia-estadisticas', [\App\Http\Controllers\ControlSeguimiento\AsistenciaController::class, 'estadisticas'])
+            ->name('asistencia.estadisticas');
+        Route::post('asistencia/horarios-docente', [\App\Http\Controllers\ControlSeguimiento\AsistenciaController::class, 'obtenerHorariosDocente'])
+            ->name('asistencia.horarios-docente');
+        Route::post('asistencia/materias-docente', [\App\Http\Controllers\ControlSeguimiento\AsistenciaController::class, 'obtenerMateriasDocente'])
+            ->name('asistencia.materias-docente');
+        
+        // Consultas de Horarios y Asistencia (CU09)
+        Route::prefix('consultas')->name('consultas.')->group(function () {
+            Route::get('dashboard', [\App\Http\Controllers\ControlSeguimiento\ConsultaHorarioController::class, 'dashboard'])
+                ->name('dashboard');
+            Route::post('horarios-docente', [\App\Http\Controllers\ControlSeguimiento\ConsultaHorarioController::class, 'horariosDocente'])
+                ->name('horarios-docente');
+            Route::post('horarios-grupo', [\App\Http\Controllers\ControlSeguimiento\ConsultaHorarioController::class, 'horariosGrupo'])
+                ->name('horarios-grupo');
+            Route::post('asistencia-docente', [\App\Http\Controllers\ControlSeguimiento\ConsultaHorarioController::class, 'asistenciaDocente'])
+                ->name('asistencia-docente');
+            Route::post('horarios-hoy', [\App\Http\Controllers\ControlSeguimiento\ConsultaHorarioController::class, 'misHorariosHoy'])
+                ->name('horarios-hoy');
+            Route::get('calendario', [\App\Http\Controllers\ControlSeguimiento\ConsultaHorarioController::class, 'calendarioAsistencia'])
+                ->name('calendario');
+            Route::post('resumen-semanal', [\App\Http\Controllers\ControlSeguimiento\ConsultaHorarioController::class, 'resumenSemanal'])
+                ->name('resumen-semanal');
+        });
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | PAQUETE: REPORTES Y DATOS
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('reporte-datos')->name('reporte-datos.')->group(function () {
+        
+        // Reportes
+        Route::get('reportes', [\App\Http\Controllers\ReporteDatos\ReporteController::class, 'index'])
+            ->name('reportes.index');
+        Route::post('reportes/horarios-pdf', [\App\Http\Controllers\ReporteDatos\ReporteController::class, 'horariosPDF'])
+            ->name('reportes.horarios-pdf');
+        Route::post('reportes/asistencia-pdf', [\App\Http\Controllers\ReporteDatos\ReporteController::class, 'asistenciaPDF'])
+            ->name('reportes.asistencia-pdf');
+        Route::post('reportes/asistencia-periodo', [\App\Http\Controllers\ReporteDatos\ReporteController::class, 'asistenciaPorPeriodo'])
+            ->name('reportes.asistencia-periodo');
+        Route::post('reportes/asistencia-asignacion', [\App\Http\Controllers\ReporteDatos\ReporteController::class, 'asistenciaPorAsignacion'])
+            ->name('reportes.asistencia-asignacion');
+        Route::post('reportes/carga-horaria', [\App\Http\Controllers\ReporteDatos\ReporteController::class, 'cargaHoraria'])
+            ->name('reportes.carga-horaria');
+        
+        // Importación
+        Route::resource('importacion', \App\Http\Controllers\ReporteDatos\ImportacionController::class)->only(['index', 'create']);
+        Route::post('importacion/docentes', [\App\Http\Controllers\ReporteDatos\ImportacionController::class, 'importarDocentes'])
+            ->name('importacion.docentes');
+        Route::post('importacion/materias', [\App\Http\Controllers\ReporteDatos\ImportacionController::class, 'importarMaterias'])
+            ->name('importacion.materias');
     });
 });
 
+
+
 // ============================================
 // EJEMPLO DE MIDDLEWARE PERSONALIZADO (OPCIONAL)
-// Si necesitas restringir por roles
+// para restringir por roles
 // ============================================
 /*
 Route::middleware(['auth', 'role:admin'])->group(function () {
@@ -400,3 +533,4 @@ Route::middleware(['auth', 'role:coordinador'])->group(function () {
     Route::resource('configuracion-academica/gestiones', GestionController::class);
 });
 */
+});

@@ -13,10 +13,11 @@ class Aula extends Model
     protected $primaryKey = 'id_aula';
     public $timestamps = false;
 
-    protected $fillable = ['nro', 'piso', 'capacidad', 'ubicacion_gps', 'id_facultad'];
+    protected $fillable = ['nro', 'piso', 'capacidad', 'ubicacion_gps', 'id_facultad', 'tipo_aula', 'disponible'];
 
     protected $casts = [
-        'capacidad' => 'integer'
+        'capacidad' => 'integer',
+        'disponible' => 'boolean'
     ];
 
     // Relación N:1

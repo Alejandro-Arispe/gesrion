@@ -25,7 +25,12 @@
                     @forelse($materias as $materia)
                     <tr>
                         <td><code class="bg-light px-2 py-1">{{ $materia->codigo }}</code></td>
-                        <td><strong>{{ $materia->nombre }}</strong></td>
+                        <td>
+                            <strong>{{ $materia->nombre }}</strong>
+                            @if($materia->requiere_laboratorio)
+                                <span class="badge bg-danger ms-2"><i class="bi bi-beaker"></i> Requiere Laboratorio</span>
+                            @endif
+                        </td>
                         <td>
                             <span class="badge bg-info">{{ $materia->carga_horaria }} horas</span>
                         </td>
@@ -81,8 +86,8 @@
                         <input type="text" class="form-control" name="nombre" id="nombre" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label fw-medium">Carga Horaria</label>
-                        <input type="number" class="form-control" name="carga_horaria" id="carga_horaria" min="1">
+                        <label class="form-label fw-medium">Carga Horaria (horas)</label>
+                        <input type="number" class="form-control" name="carga_horaria" id="carga_horaria" min="1" step="0.5">
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-medium">Facultad</label>
@@ -92,6 +97,15 @@
                                 <option value="{{ $facultad->id_facultad }}">{{ $facultad->nombre }}</option>
                             @endforeach
                         </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="requiere_laboratorio" id="requiere_laboratorio" value="1">
+                            <label class="form-check-label fw-medium" for="requiere_laboratorio">
+                                <i class="bi bi-beaker"></i> Esta materia requiere laboratorio
+                            </label>
+                            <small class="d-block text-muted mt-1">Si se marca, se asignará un aula de laboratorio (máximo 1 vez/semana)</small>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -116,6 +130,7 @@ function editarMateria(materia) {
     document.getElementById('nombre').value = materia.nombre;
     document.getElementById('carga_horaria').value = materia.carga_horaria;
     document.getElementById('id_facultad').value = materia.id_facultad || '';
+    document.getElementById('requiere_laboratorio').checked = materia.requiere_laboratorio;
     new bootstrap.Modal(document.getElementById('modalMateria')).show();
 }
 

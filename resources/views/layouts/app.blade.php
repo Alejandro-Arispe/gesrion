@@ -112,6 +112,10 @@
                        class="nav-link {{ request()->routeIs('administracion.bitacora.*') ? 'active' : '' }}">
                         <i class="bi bi-journal-text me-2"></i> Bitácora
                     </a>
+                    <a href="{{ route('administracion.importacion.index') }}" 
+                       class="nav-link {{ request()->routeIs('administracion.importacion.*') ? 'active' : '' }}">
+                        <i class="bi bi-cloud-upload me-2"></i> Importar Datos
+                    </a>
                 </div>
             </div>
 
@@ -155,6 +159,46 @@
                     <a href="{{ route('planificacion.horarios.index') }}" 
                        class="nav-link {{ request()->routeIs('planificacion.horarios.*') ? 'active' : '' }}">
                         <i class="bi bi-clock me-2"></i> Asignar Horarios
+                    </a>
+                </div>
+            </div>
+
+            <!-- Paquete Control de Seguimiento -->
+            <div class="nav-item">
+                <a class="nav-link" data-bs-toggle="collapse" href="#menuSeguimiento">
+                    <i class="bi bi-clipboard-check me-2"></i> Control de Seguimiento
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <div class="collapse submenu {{ request()->is('control-seguimiento/*') ? 'show' : '' }}" id="menuSeguimiento">
+                    <a href="{{ route('control-seguimiento.asistencia.create') }}" 
+                       class="nav-link {{ request()->routeIs('control-seguimiento.asistencia.create') ? 'active' : '' }}">
+                        <i class="bi bi-check-circle me-2"></i> Registrar Asistencia
+                    </a>
+                    <a href="{{ route('control-seguimiento.asistencia.index') }}" 
+                       class="nav-link {{ request()->routeIs('control-seguimiento.asistencia.index') ? 'active' : '' }}">
+                        <i class="bi bi-list-check me-2"></i> Ver Asistencia
+                    </a>
+                    <a href="{{ route('control-seguimiento.consultas.dashboard') }}" 
+                       class="nav-link {{ request()->routeIs('control-seguimiento.consultas.*') ? 'active' : '' }}">
+                        <i class="bi bi-calendar-week me-2"></i> Consultar Horarios
+                    </a>
+                    <a href="{{ route('control-seguimiento.asistencia.estadisticas') }}" 
+                       class="nav-link {{ request()->routeIs('control-seguimiento.asistencia.estadisticas') ? 'active' : '' }}">
+                        <i class="bi bi-bar-chart me-2"></i> Estadísticas
+                    </a>
+                </div>
+            </div>
+
+            <!-- Paquete Reportes -->
+            <div class="nav-item">
+                <a class="nav-link" data-bs-toggle="collapse" href="#menuReportes">
+                    <i class="bi bi-file-earmark-pdf me-2"></i> Reportes y Datos
+                    <i class="bi bi-chevron-down ms-auto"></i>
+                </a>
+                <div class="collapse submenu {{ request()->is('reporte-datos/*') ? 'show' : '' }}" id="menuReportes">
+                    <a href="{{ route('reporte-datos.reportes.index') }}" 
+                       class="nav-link {{ request()->routeIs('reporte-datos.reportes.*') ? 'active' : '' }}">
+                        <i class="bi bi-file-earmark-pdf me-2"></i> Generar Reportes
                     </a>
                 </div>
             </div>

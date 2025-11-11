@@ -13,5 +13,9 @@ class FacultadSeeder extends Seeder
             'nombre' => 'Facultad de Ciencias y Tecnología',
             'modulo' => 'Módulo 3'
         ]);
+         Facultad::create([
+            'nombre' => 'Facultad de Ciencias de la Computacino y telecomunicaicones',
+            'modulo' => 'Módulo 236'
+        ]);
     }
 }

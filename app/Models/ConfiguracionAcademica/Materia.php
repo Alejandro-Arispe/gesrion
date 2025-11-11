@@ -13,7 +13,11 @@ class Materia extends Model
     protected $primaryKey = 'id_materia';
     public $timestamps = false;
 
-    protected $fillable = ['codigo', 'nombre', 'carga_horaria', 'id_facultad'];
+    protected $fillable = ['codigo', 'nombre', 'carga_horaria', 'id_facultad', 'requiere_laboratorio'];
+
+    protected $casts = [
+        'requiere_laboratorio' => 'boolean',
+    ];
 
     // Relaciones N:1
     public function facultad() {

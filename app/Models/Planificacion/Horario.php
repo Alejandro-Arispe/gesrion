@@ -21,7 +21,12 @@ class Horario extends Model
         'dia_semana', 
         'hora_inicio', 
         'hora_fin', 
-        'tipo_asignacion'
+        'tipo_asignacion',
+        'distribucion_dias'
+    ];
+
+    protected $casts = [
+        'distribucion_dias' => 'array',
     ];
 
     // Relaciones N:1

@@ -29,14 +29,14 @@
                         </td>
                         <td>
                             <span class="badge bg-secondary">
-                                {{ $bitacora->usuario->username ?? 'Sistema' }}
+                                {{ $bitacora->username ?? 'Sistema' }}
                             </span>
                         </td>
                         <td>
                             <span class="badge bg-info">{{ $bitacora->accion }}</span>
                         </td>
                         <td>{{ $bitacora->descripcion }}</td>
-                        <td><code>{{ $bitacora->ip_origen }}</code></td>
+                        <td><code>{{ $bitacora->ip_origen ?? 'N/A' }}</code></td>
                     </tr>
                     @empty
                     <tr>

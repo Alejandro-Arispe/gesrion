@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
             RolSeeder::class,
             UsuarioSeeder::class,
             FacultadSeeder::class,
+            HorarioSeeder::class,
         ]);
     }
 }

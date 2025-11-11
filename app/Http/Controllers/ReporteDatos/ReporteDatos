@@ -1,0 +1,132 @@
+<?php
+
+namespace App\Http\Controllers\ReporteDatos;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\Planificacion\Horario;
+use App\Models\ControlSeguimiento\Asistencia;
+use App\Models\ConfiguracionAcademica\Docente;
+use App\Models\ConfiguracionAcademica\GestionAcademica;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
+use Carbon\Carbon;
+use Exception;
+
+class ReporteController extends Controller
+{
+    /**
+     * Vista principal de reportes
+     */
+    public function index()
+    {
+        $docentes = Docente::where('estado', true)->get();
+        $gestiones = GestionAcademica::all();
+        
+        return view('reporte-datos.reportes.index', compact('docentes', 'gestiones'));
+    }
+
+    /**
+     * Generar reporte de horarios en PDF
+     */
+    public function horariosPDF(Request $request)
+    {
+        try {
+            $query = Horario::with(['grupo.materia', 'grupo.docente', 'aula', 'grupo.gestion']);
+
+            // Filtros
+            if ($request->has('id_docente') && $request->id_docente) {
+                $query->whereHas('grupo', function($q) use ($request) {
+                    $q->where('id_docente', $request->id_docente);
+                });
+            }
+
+            if ($request->has('id_gestion') && $request->id_gestion) {
+                $query->whereHas('grupo', function($q) use ($request) {
+                    $q->where('id_gestion', $request->id_gestion);
+                });
+            }
+
+            $horarios = $query->orderBy('dia_semana')
+                             ->orderBy('hora_inicio')
+                             ->get();
+
+            // Agrupar por día
+            $horariosPorDia = $horarios->groupBy('dia_semana');
+
+            $docente = $request->id_docente ? Docente::find($request->id_docente) : null;
+            $gestion = $request->id_gestion ? GestionAcademica::find($request->id_gestion) : null;
+
+            $pdf = Pdf::loadView('reporte-datos.reportes.horarios-pdf', compact('horariosPorDia', 'docente', 'gestion'));
+            
+            $filename = 'horarios_' . Carbon::now()->format('Y-m-d_His') . '.pdf';
+            
+            return $pdf->download($filename);
+        } catch (Exception $e) {
+            return back()->with('error', 'Error al generar PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generar reporte de asistencia en Excel
+     */
+    public function asistenciaExcel(Request $request)
+    {
+        try {
+            $request->validate([
+                'fecha_inicio' => 'required|date',
+                'fecha_fin' => 'required|date|after_or_equal:fecha_inicio'
+            ]);
+
+            return Excel::download(
+                new \App\Exports\AsistenciaExport($request->all()),
+                'asistencia_' . Carbon::now()->format('Y-m-d_His') . '.xlsx'
+            );
+        } catch (Exception $e) {
+            return back()->with('error', 'Error al generar Excel: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generar reporte de carga horaria
+     */
+    public function cargaHoraria(Request $request)
+    {
+        try {
+            $idGestion = $request->id_gestion;
+            
+            $docentes = Docente::with(['grupos' => function($query) use ($idGestion) {
+                if ($idGestion) {
+                    $query->where('id_gestion', $idGestion);
+                }
+                $query->with(['materia', 'horarios']);
+            }])->where('estado', true)->get();
+
+            // Calcular carga horaria
+            $cargaHoraria = [];
+            foreach ($docentes as $docente) {
+                $totalHoras = 0;
+                foreach ($docente->grupos as $grupo) {
+                    foreach ($grupo->horarios as $horario) {
+                        $inicio = Carbon::parse($horario->hora_inicio);
+                        $fin = Carbon::parse($horario->hora_fin);
+                        $totalHoras += $inicio->diffInHours($fin);
+                    }
+                }
+                
+                $cargaHoraria[] = [
+                    'docente' => $docente->nombre,
+                    'grupos' => $docente->grupos->count(),
+                    'horas_semanales' => $totalHoras,
+                    'horas_mensuales' => $totalHoras * 4
+                ];
+            }
+
+            $pdf = Pdf::loadView('reporte-datos.reportes.carga-horaria-pdf', compact('cargaHoraria'));
+            
+            return $pdf->download('carga_horaria_' . Carbon::now()->format('Y-m-d') . '.pdf');
+        } catch (Exception $e) {
+            return back()->with('error', 'Error al generar reporte: ' . $e->getMessage());
+        }
+    }
+}

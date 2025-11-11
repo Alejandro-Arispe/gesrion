@@ -57,7 +57,11 @@
                             @endif
                         </td>
                         <td>
-                            <span class="badge bg-info">Aula {{ $horario->aula->nro }}</span>
+                            @if($horario->aula)
+                                <span class="badge bg-info">Aula {{ $horario->aula->nro }}</span>
+                            @else
+                                <span class="badge bg-warning text-dark">Sin aula</span>
+                            @endif
                         </td>
                         <td class="text-center">
                             <form action="{{ route('planificacion.horarios.destroy', $horario->id_horario) }}" 

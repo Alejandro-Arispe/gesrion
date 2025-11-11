@@ -26,6 +26,11 @@ class Docente extends Model
         return $this->belongsTo(Facultad::class, 'id_facultad');
     }
 
+    // Relación 1:1 con Usuario
+    public function usuario() {
+        return $this->hasOne(\App\Models\Administracion\Usuario::class, 'id_docente');
+    }
+
     // Relación 1:N
     public function grupos() {
         return $this->hasMany(Grupo::class, 'id_docente');
