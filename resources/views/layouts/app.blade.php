@@ -266,7 +266,27 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ asset('js/global-fix.js') }}"></script>
     <script>
+        // ✅ FIX: Limpiar backdrops/modales huérfanos al cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            // Cerrar cualquier modal abierto
+            document.querySelectorAll('.modal.show').forEach(modal => {
+                const bsModal = bootstrap.Modal.getInstance(modal);
+                if(bsModal) bsModal.hide();
+            });
+
+            // Remover backdrops huérfanos
+            document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+                backdrop.remove();
+            });
+
+            // Restaurar scroll y pointer-events
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = 'auto';
+            document.body.style.pointerEvents = 'auto';
+        });
+
         // Toggle sidebar
         document.getElementById('toggleSidebar')?.addEventListener('click', () => {
             const sidebar = document.getElementById('sidebar');
@@ -297,6 +317,18 @@
                     new bootstrap.Collapse(submenu, { toggle: false }).show();
                 }
             }
+        });
+
+        // ✅ FALLBACK: Si el backdrop persiste, cerrar después de 2 segundos
+        window.addEventListener('load', function() {
+            setTimeout(() => {
+                const backdrop = document.querySelector('.modal-backdrop');
+                if(backdrop && backdrop.style.display !== 'none') {
+                    backdrop.remove();
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = 'auto';
+                }
+            }, 2000);
         });
     </script>
     @yield('scripts')
